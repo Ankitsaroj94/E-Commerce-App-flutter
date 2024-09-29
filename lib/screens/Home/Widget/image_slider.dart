@@ -1,13 +1,60 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
-class ImageSlider extends StatelessWidget {
+class ImageSlider extends StatefulWidget {
   final Function(int) onChange;
   final int currentSlide;
+
   const ImageSlider({
     super.key,
     required this.currentSlide,
     required this.onChange,
   });
+
+  @override
+  _ImageSliderState createState() => _ImageSliderState();
+}
+
+class _ImageSliderState extends State<ImageSlider> {
+  final List<String> images = [
+    "images/slider.jpg",
+    "images/image1.png",
+    "images/slider3.png",
+    "images/slider.jpg",
+    "images/image1.png",
+  ];
+
+  late PageController _controller;
+  int currentIndex = 0;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = PageController(initialPage: images.length * 100);
+    currentIndex = widget.currentSlide;
+    _startAutoSlide();
+  }
+
+  void _startAutoSlide() {
+    _timer = Timer.periodic(const Duration(seconds: 2), (timer) {
+      if (!mounted) return;
+      currentIndex++;
+      _controller.animateToPage(
+        currentIndex % images.length,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+      widget.onChange(currentIndex % images.length);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,25 +65,22 @@ class ImageSlider extends StatelessWidget {
           width: double.infinity,
           child: ClipRRect(
             borderRadius: BorderRadius.circular(15),
-            child: PageView(
-              scrollDirection: Axis.horizontal,
-              allowImplicitScrolling: true,
-              onPageChanged: onChange,
+            child: PageView.builder(
+              controller: _controller,
+              itemCount: null,
+              onPageChanged: (index) {
+                setState(() {
+                  currentIndex = index % images.length;
+                });
+                widget.onChange(currentIndex);
+              },
               physics: const ClampingScrollPhysics(),
-              children: [
-                Image.asset(
-                  "images/slider.jpg",
+              itemBuilder: (context, index) {
+                return Image.asset(
+                  images[index % images.length],
                   fit: BoxFit.cover,
-                ),
-                Image.asset(
-                  "images/image1.png",
-                  fit: BoxFit.cover,
-                ),
-                Image.asset(
-                  "images/slider3.png",
-                  fit: BoxFit.cover,
-                )
-              ],
+                );
+              },
             ),
           ),
         ),
@@ -47,20 +91,19 @@ class ImageSlider extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
-                5,
+                images.length,
                 (index) => AnimatedContainer(
-                  duration: const Duration(microseconds: 300),
-                  width: currentSlide == index ? 15 : 8,
+                  duration: const Duration(milliseconds: 300),
+                  width: currentIndex == index ? 15 : 8,
                   height: 8,
                   margin: const EdgeInsets.only(right: 3),
                   decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(10),
-                      color: currentSlide == index
-                          ? Colors.black
-                          : Colors.transparent,
-                      border: Border.all(
-                        color: Colors.black,
-                      )),
+                    borderRadius: BorderRadius.circular(10),
+                    color: currentIndex == index
+                        ? Colors.black
+                        : Colors.transparent,
+                    border: Border.all(color: Colors.black),
+                  ),
                 ),
               ),
             ),
